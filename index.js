@@ -47,17 +47,15 @@ app.post("/generate", (req, res) => {
         console.log("====================================");
         console.log("Nova requisição");
 
-        // Aceita objeto OU array (padrão do n8n quando necessário)
+        // Aceita objeto ou array (n8n)
         let body = req.body;
 
         if (Array.isArray(body)) {
 
             if (body.length === 0) {
-
                 return res.status(400).json({
                     error: "Array recebido vazio."
                 });
-
             }
 
             body = body[0];
@@ -76,7 +74,7 @@ app.post("/generate", (req, res) => {
 
         }
 
-        // Aceita com ou sem .docx
+        // Aceita template com ou sem .docx
         const templateName = body.template
             .replace(/\.docx$/i, "")
             .trim();
@@ -123,6 +121,15 @@ app.post("/generate", (req, res) => {
             compression: "DEFLATE"
         });
 
+        // Nome do arquivo para download
+        const nomePessoa = (body.nome_completo || "Documento")
+            .replace(/[<>:"/\\|?*\x00-\x1F]/g, "")
+            .trim();
+
+        const nomeArquivo = body.nome_completo
+            ? `Documento - ${nomePessoa}.docx`
+            : "Documento.docx";
+
         res.setHeader(
             "Content-Type",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -130,7 +137,7 @@ app.post("/generate", (req, res) => {
 
         res.setHeader(
             "Content-Disposition",
-            `attachment; filename="${templateName}.docx"`
+            `attachment; filename="${nomeArquivo}"`
         );
 
         return res.send(buffer);
