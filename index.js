@@ -10,8 +10,17 @@ const app = express();
 app.use(express.json({ limit: "20mb" }));
 
 const PORT = process.env.PORT || 3000;
-const TEMPLATE_FOLDER = process.env.TEMPLATE_FOLDER || path.join(__dirname, "templates");
+const TEMPLATE_FOLDER =
+    process.env.TEMPLATE_FOLDER || path.join(__dirname, "template");
+
 const API_KEY = process.env.API_KEY;
+
+app.get("/", (req, res) => {
+    res.json({
+        service: "Document Service",
+        status: "online"
+    });
+});
 
 app.get("/health", (req, res) => {
     res.json({
@@ -28,34 +37,62 @@ app.post("/generate", (req, res) => {
             const key = req.headers["x-api-key"];
 
             if (key !== API_KEY) {
-
                 return res.status(401).json({
                     error: "API Key inválida."
                 });
-
             }
 
         }
 
-        const body = req.body;
+        console.log("====================================");
+        console.log("Nova requisição");
+
+        // Aceita objeto ou array (n8n)
+        let body = req.body;
+
+        if (Array.isArray(body)) {
+
+            if (body.length === 0) {
+                return res.status(400).json({
+                    error: "Array recebido vazio."
+                });
+            }
+
+            body = body[0];
+
+            console.log("Recebido array. Utilizando primeiro item.");
+
+        }
+
+        console.log(JSON.stringify(body, null, 2));
 
         if (!body.template) {
 
             return res.status(400).json({
-                error: "Campo template é obrigatório."
+                error: "Campo 'template' é obrigatório."
             });
 
         }
 
+        // Aceita template com ou sem .docx
+        const templateName = body.template
+            .replace(/\.docx$/i, "")
+            .trim();
+
         const templatePath = path.join(
             TEMPLATE_FOLDER,
-            `${body.template}.docx`
+            `${templateName}.docx`
         );
+
+        console.log("Template:", templatePath);
 
         if (!fs.existsSync(templatePath)) {
 
             return res.status(404).json({
-                error: "Template não encontrado."
+                error: "Template não encontrado.",
+                template: templateName,
+                caminho: templatePath,
+                templatesDisponiveis: fs.readdirSync(TEMPLATE_FOLDER)
             });
 
         }
@@ -84,6 +121,15 @@ app.post("/generate", (req, res) => {
             compression: "DEFLATE"
         });
 
+        // Nome do arquivo para download
+        const nomePessoa = (body.nome_completo || "Documento")
+            .replace(/[<>:"/\\|?*\x00-\x1F]/g, "")
+            .trim();
+
+        const nomeArquivo = body.nome_completo
+            ? `Documento - ${nomePessoa}.docx`
+            : "Documento.docx";
+
         res.setHeader(
             "Content-Type",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -91,17 +137,18 @@ app.post("/generate", (req, res) => {
 
         res.setHeader(
             "Content-Disposition",
-            `attachment; filename="${body.template}.docx"`
+            `attachment; filename="${nomeArquivo}"`
         );
 
-        res.send(buffer);
+        return res.send(buffer);
 
     } catch (error) {
 
         console.error(error);
 
-        res.status(500).json({
-            error: error.message
+        return res.status(500).json({
+            error: error.message,
+            stack: error.stack
         });
 
     }
@@ -111,5 +158,6 @@ app.post("/generate", (req, res) => {
 app.listen(PORT, () => {
 
     console.log(`Document Service iniciado na porta ${PORT}`);
+    console.log(`Templates: ${TEMPLATE_FOLDER}`);
 
 });
