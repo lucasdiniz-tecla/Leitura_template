@@ -1,17 +1,12 @@
 {
   "name": "document-service",
-  "version": "2.0.0",
-  "description": "Serviço de geração de documentos DOCX e PDF",
-  "main": "index.js",
+  "version": "1.0.0",
+  "main": "app.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "node --watch index.js"
+    "start": "node index.js"
   },
   "dependencies": {
-    "docx-templates": "^4.14.0",
-    "express": "^4.21.2"
-  },
-  "engines": {
-    "node": ">=18"
+    "docxtemplater": "^3.66.7",
+    "express": "^4.21.2",
+    "pizzip": "^3.2.0"
   }
-}
